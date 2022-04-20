@@ -1,0 +1,104 @@
+---
+title: "Covid Cases Data Analysis"
+author: "Geoffrey Richards"
+date: "4/11/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Covid Cases Data
+
+This is a report summarizing and characterizing COVID-19 data.  
+
+County data source: https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv.
+
+States data source: https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv.
+
+US data source: https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv.
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE}
+#Import libraries
+library(tidyverse)
+library(readr)
+library(dplyr)
+
+#Obtain data from source.
+urlCounties <- "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+urlStates <- "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+urlUS <- "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv"
+
+covidDataCounties = read_csv(urlCounties)
+covidDataStates = read_csv(urlStates)
+covidDataUS = read_csv(urlUS)
+```
+
+\newpage
+Covid Data headers
+```{r covidDataUS, echo = TRUE, warning = FALSE, message = FALSE}
+#Take a look at data.
+head(covidDataUS)
+```
+
+```{r covidDataCounties, echo = TRUE, warning = FALSE, message = FALSE}
+head(covidDataCounties)
+```
+
+```{r covidDataStates, echo = TRUE, warning = FALSE, message = FALSE}
+head(covidDataStates)
+```
+
+\newpage
+## Data Visualization
+
+We can plot the US deaths by day.  The highest death rates appear to be located early on in the pandemic at the beginning of 2020 and early in 2021.  Death rates appear to be lowest in mid-summer and increase more rapidly in the fall and winter.
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE}
+#Analyze US deaths.
+us <- subset(covidDataUS, select = -c(cases))
+plot(us$date,us$deaths,main="Covid Deaths USA",xlab="Day Count",ylab="Deaths")
+```
+
+\newpage
+We can plot the US cases by day. In conjunction with the death rate trends seen above, we can observe sharp increases in case counts during the fall and winter seasons.  Especially noteworthy is the extreme spike in cases at the beginning of 2022. The rate at which cases appeared during early 2022 far exceeded any past instances of outbreaks. This incident could be primarily associated with the rise of the Omicron variant.
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE}
+#Analyze US Cases
+us <- subset(covidDataUS, select = -c(deaths))
+plot(us$date,us$cases,main="Covid Cases USA",xlab="Day Count",ylab="Cases")
+```
+
+\newpage
+We can determine the mortality rate of covid cases in the US. While case and death counts are important statistics, mortality rate could be what most people look for when worrying about deadly diseases. Luckily, there has been a stark downward trend in the mortality rate of Covid. In early 2020, the mortality rate exceeded 4% for an extended duration.  This means that for every 100 people who caught coronavirus, 4 of them died on average.  
+
+By 2021, the mortality rate had leveled off at a more modest 2% probably due to both more effective case/death counting procedures and advances in counter-covid medical practices.  Finally, by 2022, the mortality rate had declined to 1.5%. This final sharp decline in 2022 may be attributed to the less-lethal but more proliferant Omicron variant, or it may be attributed to the mass production of the coronavirus vaccine during 2021.
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE}
+#Analyze US deaths per case.
+us <- covidDataUS
+us$divide <- us$deaths/us$cases
+plot(us$date,us$divide,main="Covid Mortality Rate USA",xlab="Day Count",ylab="Deaths per Case")
+```
+
+\newpage
+We can determine the mortality rate trend of covid cases in the US. Using our mortality rate data, we can observe a logarithmic trend staring in 2020 and ending in the present day.  In producing this model, the first 100 rows of data were eliminated.  I believe that the first 100 days of data were in large part corrupted by inaccurate case counting procedures.  However, we can undoubtedly observe an optimistic downward trend in mortality rates.  Hopefully as a result of advancing medical technology, one day we can expect the coronavirus mortality rate to fall in line with other common diseases such as the flu (~0.1% mortality rate).
+
+Despite this optimism, we may be biased as variants of coronavirus may prove to be more lethal and proliferant than previous variants.  Time will tell what the long term trends truly reveal.
+
+```{r, echo = TRUE, warning = FALSE, message = FALSE}
+#Fit linear regression model
+us <- covidDataUS[-c(1:100),]
+us$divide <- us$deaths/us$cases
+us$index <- 1:nrow(us)
+
+lmTemp = lm(divide~log(index), data = us)
+summary(lmTemp) #Review the result
+
+#Obtain predictions
+speed <- us$index
+us$pred <- predict(lmTemp, data = speed)
+plot(us$date,us$divide,type="l",main="Mortality Rate Trend",xlab="Day Count",ylab="Deaths per Case")
+lines(us$date,us$pred,lty=2,lwd=2,col="green")
+```
